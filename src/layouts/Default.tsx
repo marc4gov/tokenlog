@@ -22,7 +22,7 @@ function getWeb3Provider(provider: any): Web3Provider {
 export function Default() {
   return (
     <div>
-      <BetaBanner />
+      {/* <BetaBanner /> */}
       <BrowserRouter>
         <Web3ReactProvider getLibrary={getWeb3Provider}>
           <Header />

@@ -8,7 +8,7 @@ export function Header() {
     <header>
       <nav className="navbar navbar-expand navbar-dark bg-dark">
         <Link to="/" className="navbar-brand">
-          Tokenlog
+          Tokenlog for Volt
         </Link>
         <div className="ml-auto mr-1 d-flex">
           <NetworkBadge />

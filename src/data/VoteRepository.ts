@@ -21,6 +21,7 @@ class VoteRepository {
 
   public async Connect(): Promise<void> {
     if (!this.connected) {
+      console.log("Mongo: ", DbConfig.DB_CONNECTIONSTRING)
       await mongoose.connect(DbConfig.DB_CONNECTIONSTRING, dbOptions);
       this.connected = true;
     }

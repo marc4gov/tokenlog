@@ -11,7 +11,7 @@ export default function Settings() {
         <h2>{repo} settings</h2>
         <h3>
           <small>
-            <Link to={`/${org}/${repo}`}>back to repostiory</Link>
+            <Link to={`/${org}/${repo}`}>back to repository</Link>
           </small>
         </h3>
 
