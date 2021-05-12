@@ -1,5 +1,7 @@
-import { Repository, RepositoryType } from 'types/Repository';
-import { Owner } from 'types/Owner';
+import { Repository, RepositoryType, } from 'types/Repository';
+import { GitlabProjectLinks, GitlabProject, GitlabGroup, ProjectRepo} from 'types/RepositoryGitlab';
+import { Namespace } from 'types/Namespace';
+import { Owner, OwnerType } from 'types/Owner';
 import { Label } from 'types/Label';
 import { Vote } from 'types/Vote';
 import { Issue, IssueState, IssueType } from 'types/Issue';
@@ -7,71 +9,51 @@ import { RepositorySettings } from 'types/RepositorySettings';
 import VotingService from './VotingService';
 import axios from 'axios';
 import { AppConfig } from 'config/App';
+import { LabelBadges } from 'components/LabelBadges';
 
 export default {
-  GetRepositories,
-  GetRepository,
-  GetRepositoryLabels,
-  GetRepositoryIssues,
-  GetRepositorySettings,
-  GetIssue,
+  GetGroups,
+  GetProjects,
+  GetProjectLabels,
+  GetProjectIssues
 };
 
-async function GetRepositories(
-  group: string,
-  type: RepositoryType = RepositoryType.PUBLIC,
-  limit: number = 25,
-  page: number = 1,
-  sort: 'created' | 'updated' | 'pushed' | 'full_name' | undefined = 'updated',
-  direction: 'asc' | 'desc' | undefined = 'desc'
-): Promise<Array<Repository>> {
-  const result = await axios.get({ group: owner, type, per_page: limit, page, sort, direction });
-  if (result.status !== 200) throw new Error("Couldn't retrieve public repositories");
-
+async function GetGroups(
+  group_url: string = "https://gitlab.com/api/v4/groups/12046108/subgroups"
+): Promise<Array<GitlabGroup>> {
+  const result = await axios.get(group_url);
+  if (result.status !== 200) throw new Error("Couldn't retrieve public groups");
   return Array.from(result.data)
-    .map((i) => toRepository(i))
+    .map((i) => toGitlabGroup(i))
+    .sort((a, b) => b.id - a.id);
+}
+
+async function GetProjects(
+  group_url: string = "https://gitlab.com/api/v4/groups/",
+  group_id: number = 0,
+): Promise<Array<GitlabProject>> {
+  const result = await axios.get(group_url + group_id);
+  if (result.status !== 200) throw new Error("Couldn't retrieve public projects");
+
+  return Array.from(result.data.projects)
+    .map((i) => toGitlabProject(i))
     .sort((a, b) => b.stargazersCount - a.stargazersCount);
 }
 
-async function GetRepository(owner: string, repo: string): Promise<Repository> {
-  const octokit = new Octokit();
-  const result = await octokit.repos.get({ owner, repo });
-  if (result.status !== 200) throw new Error("Couldn't retrieve repository info");
-
-  return toRepository(result.data);
+async function GetProjectLabels(project_id: number): Promise<Array<Label>> {
+  const result = await axios.get("https://gitlab.com/api/v4/projects/" + project_id + "/labels?private_token=vJsnvkksdELzxsJR2Pwz");
+  if (result.status !== 200) throw new Error("Couldn't retrieve labels");
+  return Array.from(result.data)
+    .map((i) => toLabel(i, false))
+    .sort((a, b) => b.id - a.id);
 }
 
-async function GetRepositoryLabels(owner: string, repo: string): Promise<Array<Label>> {
-  const octokit = new Octokit();
-  const result = await octokit.issues.listLabelsForRepo({ owner, repo });
-  if (result.status !== 200) throw new Error("Couldn't retrieve repository labels");
+async function GetProjectIssues(project_id: number = 0): Promise<Array<Issue>> {
+  const result = await axios.get("https://gitlab.com/api/v4/projects/" + project_id + "/issues?private_token=vJsnvkksdELzxsJR2Pwz");
+  if (result.status !== 200) throw new Error("Couldn't retrieve issues");
 
-  return Array.from(result.data).map((i) => toLabel(i));
-}
-
-async function GetRepositoryIssues(
-  owner: string,
-  repo: string,
-  state: IssueState = IssueState.OPEN,
-  labels: string = '',
-  limit: number = 25,
-  page: number = 1,
-  sort: 'updated' | 'created' | 'comments' | undefined = 'updated',
-  direction: 'asc' | 'desc' | undefined = 'desc'
-): Promise<Array<Issue>> {
-  const octokit = new Octokit();
-  const result = await octokit.issues.listForRepo({
-    owner,
-    repo,
-    state,
-    labels,
-    per_page: limit,
-    page,
-    sort,
-    direction,
-  });
-  if (result.status !== 200) throw new Error("Couldn't retrieve repository issues");
-
+  const owner = "";
+  const repo = ""
   const votes = await VotingService.GetVotes(owner, repo);
 
   return Array.from(result.data)
@@ -79,65 +61,76 @@ async function GetRepositoryIssues(
     .sort((a, b) => b.voteCount - a.voteCount);
 }
 
-async function GetRepositorySettings(
-  owner: string,
-  repo: string,
-  chainId?: number
-): Promise<RepositorySettings | undefined> {
-  try {
-    const result = await axios.get(`/.netlify/functions/settings?owner=${owner}&repo=${repo}&chainId=${chainId}`);
-    if (result.status !== 200) throw new Error("Couldn't get repository settings");
-
-    return result.data;
-  } catch {
-    console.error("Couldn't get repository settings", owner, repo, chainId);
-  }
-}
-
-async function GetIssue(owner: string, repo: string, number: number): Promise<Issue | undefined> {
-  const octokit = new Octokit({
-    auth: AppConfig.GITHUB_ACCESS_TOKEN,
-  });
-  const result = await octokit.issues.get({ owner, repo, issue_number: number });
-  if (result.status !== 200) throw new Error("Couldn't retrieve repository info");
-
-  return toIssue(result.data, []);
-}
-
-function toRepository(source: any): Repository {
+function toGitlabGroup(source: any): GitlabGroup {
   return {
     id: source.id,
     name: source.name,
-    fullName: source.full_name,
+    path: source.path,
     description: source.description,
-    language: source.language,
-    archived: source.archived,
-    owner: toOwner(source.owner),
     created: new Date(source.created_at),
-    updated: new Date(source.updated_at),
-    url: source.html_url,
-    homepage: source.homepage,
-    stargazersCount: source.stargazers_count,
-    watchersCount: source.watchers_count,
+    url: source.web_url,
+    parent_id: source.parent_id
+  } as GitlabGroup;
+}
+
+function toGitlabProject(source: any): GitlabProject {
+  return {
+    id: source.id,
+    name: source.name,
+    path: source.path,
+    description: source.description,
+    url: source.web_url,
+    readme_url: source.readme_url,
+    _links: toGitlabProjectLinks(source._links),
+    archived: source.archived,
+    owner: toNamespace(source.namespace),
+    created: new Date(source.created_at),
+    updated: new Date(source.last_activity_at),
+    homepage: source.readme_url,
+    stargazersCount: source.star_count,
     forksCount: source.forks_count,
     openIssueCount: source.open_issues_count,
-  } as Repository;
+  } as GitlabProject;
+}
+
+function toGitlabProjectLinks(source: any): GitlabProjectLinks {
+  return {
+    self: source.self,
+    issues: source.issues,
+    merge_requests: source.merge_requests,
+    repo_branches: source.repo_branches,
+    labels: source.labels,
+    events: source.events,
+    members: source.members,
+  } as GitlabProjectLinks;
 }
 
 function toOwner(source: any): Owner {
   return {
     id: source.id,
     name: source.login,
-    type: source.type,
-    url: source.html_url,
+    username: source.username,
+    type: source.username != null ? OwnerType.USER : OwnerType.ORGANIZATION,
+    url: source.web_url,
     avatarUrl: source.avatar_url,
   } as Owner;
 }
 
-function toIssue(source: any, votes: Array<Vote>): Issue {
+function toNamespace(source: any): Namespace {
   return {
     id: source.id,
-    number: source.number,
+    name: source.login,
+    kind: source.kind,
+    url: source.web_url,
+    avatarUrl: source.avatar_url,
+    parent_id: source.parent_id
+  } as Namespace;
+}
+
+function toIssue(source: any, votes: Array<Vote>, gitlab: boolean = false): Issue {
+  return {
+    id: source.id,
+    number: source.iid,
     title: source.title,
     description: source.body,
     state: source.state,
@@ -160,4 +153,9 @@ function toLabel(source: any): Label {
     description: source.description,
     color: source.color,
   } as Label;
+}
+
+function toGitlabLabel(name: string, labels: Label[]): Label {
+  labels.filter((a) => (a.name == name))
+  return labels[0] as Label;
 }

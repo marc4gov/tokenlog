@@ -1,4 +1,4 @@
-import { Owner } from './Owner';
+import { Namespace } from './Namespace';
 
 export interface GitlabProjectLinks {
   self: string;
@@ -15,10 +15,16 @@ export interface GitlabProject {
   name: string;
   path: string;
   description: string;
-  created_at: Date;
-  web_url: string;
   readme_url: string;
   _links: GitlabProjectLinks;
+  owner: Namespace;
+  created: Date;
+  updated: Date;
+  url: string;
+  homepage: string;
+  stargazersCount: number;
+  forksCount: number;
+  openIssueCount: number;
 }
 
 export interface GitlabGroup {
@@ -26,10 +32,9 @@ export interface GitlabGroup {
   name: string;
   path: string;
   description: string;
-  created_at: Date;
-  web_url: string;
+  created: Date;
+  url: string;
   parent_id: number;
-  projects: Array<GitlabProject>;
 }
 
 export interface ProjectRepo {
