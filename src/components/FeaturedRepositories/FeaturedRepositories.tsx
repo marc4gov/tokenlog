@@ -41,10 +41,10 @@ const projects = [
     link: '/wslyvh/tokenlog',
   },
   {
-    title: 'Tokenlog for Volt',
-    description: 'Token-weighted backlog for Volt',
+    title: 'Stork simulation',
+    description: 'Crowd control simulation',
     imageUrl: 'https://tokenlog.xyz/icon.png',
-    link: '/marc4gov/tokenlog',
+    link: '/marc4gov/stork',
   },
   {
     title: 'Token Engineering Commons (TEC)',

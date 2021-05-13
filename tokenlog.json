@@ -1,5 +1,7 @@
 {
 	"org": "marc4gov",
-	"repo": "tokenlog",
-	"tokenAddress": "0x6b175474e89094c44da98b954eedeac495271d0f"
+	"repo": "stork",
+	"tokenAddress": "0xbb6f194634d83c83bca618d8e11512b0d637ba22",
+	"votingMethod": "STANDARD",
+	"chainId": 4
 }

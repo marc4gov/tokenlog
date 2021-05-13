@@ -44,7 +44,7 @@ async function GetProjectLabels(project_id: number): Promise<Array<Label>> {
   const result = await axios.get("https://gitlab.com/api/v4/projects/" + project_id + "/labels?private_token=vJsnvkksdELzxsJR2Pwz");
   if (result.status !== 200) throw new Error("Couldn't retrieve labels");
   return Array.from(result.data)
-    .map((i) => toLabel(i, false))
+    .map((i) => toLabel(i))
     .sort((a, b) => b.id - a.id);
 }
 
